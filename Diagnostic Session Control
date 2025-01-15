@@ -1,0 +1,119 @@
+ CAPL script for Diagnostic Session Control:
+
+/*@!Encoding:65001*/
+
+
+
+variables
+{
+  //Request 
+  //  diagRequest EMS.ExtendedDiagnosticSession_Start Extendrequest_Session; 
+    //   diagrequest  EMS.DefaultSession_Start Default_Session_Request;
+   //  diagRequest EMS.ProgrammingSession_Start Programming_Session_Request;
+      diagRequest Door.ExtendedDiagnosticSession_Start Extendrequest_Session; 
+      diagrequest Door.DefaultSession_Start  Default_Session_Request;
+      diagRequest Door.ProgrammingSession_Start Programming_Session_Request;
+  //Response
+    //   diagResponse EMS.ExtendedDiagnosticSession_Start ExtendResponse_Session;
+   //  diagresponse  EMS.DefaultSession_Start Default_Session_Resoponce;
+   //  diagResponse EMS.ProgrammingSession_Start Programming_Session_Responce;
+     diagResponse Door.ExtendedDiagnosticSession_Start ExtendResponse_Session; 
+     diagResponse  Door.DefaultSession_Start Default_Session_Resoponce;
+     diagResponse Door.ProgrammingSession_Start Programming_Session_Responce;
+    byte Diag_Event_Accured=0x01;
+    byte no_Error=0x00;
+    byte temp;
+    byte NRC_data;
+    
+}
+
+testcase Extended_Session()
+{ 
+  byte NewRequest[2] = {0x10, 0x04};
+  DiagGetPrimitiveSize(Extendrequest_Session);
+  diagResize(Extendrequest_Session,2);
+  diagSetPrimitiveData(Extendrequest_Session,NewRequest,2);
+  diagSendRequest(Extendrequest_Session);
+  testWaitForDiagRequestSent(Extendrequest_Session,1000);
+  testStep("","send the following request");
+  testReportWriteDiagObject(Extendrequest_Session);
+ // testReportWriteDiagResponse(Extendrequest_Session);
+ // testReportWriteDiagObject(ExtendResponse_Session);
+  //testStepPass("","Positive Responce Recieved for Extended Session Request");
+  if(Diag_Event_Accured == testWaitForDiagResponse(Extendrequest_Session,3000))
+  {
+    testStep("","Recieved Responce");
+    
+    //testReportWriteDiagResponse(Extendrequest_Session);
+    testWaitForTimeout(1000);
+    if(no_Error==diagInterpretRespAs(Extendrequest_Session,"STDS_PR")){
+      temp =diagInterpretRespAs(Extendrequest_Session,"STDS_PR");
+      testReportWriteDiagObject(ExtendResponse_Session);
+      testStepPass("","Positive Responce Recieved for Extended Session Request");     
+    }
+    else{
+      NRC_data=diagGetLastResponseCode(Extendrequest_Session);
+      switch(NRC_data)
+    {
+      case 0x12:
+        {
+          testStepFail("","sub-functionNotSupported = 0x%02x",NRC_data);
+          testStepPass("","This NRC shall be sent if the sub-function parameter is not supported.");   
+        }
+        break;
+        case 0x13:
+        {
+          testStepFail("","incorrectMessageLengthOrInvalidFormat = 0x%02x",NRC_data);
+          testStepPass("","This NRC shall be sent if the length of the message is wrong.");   
+        }
+        break;
+        case 0x22:
+        {
+          testStepFail("","conditionsNotCorrect = 0x%02x",NRC_data);
+          testStepPass("","This NRC shall be returned if the criteria for the request DiagnosticSessionControl are not met.");   
+        }
+        break;
+        }
+      testStepFail("","Negative  Responce Recieved for Extended Session Request = 0x%02x",NRC_data);
+    }
+  }
+  
+}
+
+testcase Default_Session()
+{  
+  testWaitForTimeout(100);
+   diagSendRequest(Default_Session_Request);
+  testStep("","Sending Default Session Request");
+  testReportWriteDiagObject(Default_Session_Request);
+  testWaitForDiagRequestSent(Default_Session_Request,1000);
+  if(no_Error=diagInterpretRespAs(Default_Session_Request,"STDS_PR"))
+  { 
+    testReportWriteDiagObject(Default_Session_Resoponce);
+    testStep("","Recieved Positive Responce for Default session ");
+  }
+  else{
+    NRC_data=diagGetLastResponseCode(Default_Session_Request);
+    testStepFail("","Negative  Responce Recieved for Default Session Request = 0x%02x",NRC_data);
+    
+  }
+}
+
+testcase Programming_Session()
+{ 
+  testWaitForTimeout(100);
+   diagSendRequest(Programming_Session_Request);
+  testStep("","Sending Programming Session Request");
+  testReportWriteDiagObject(Programming_Session_Request);
+  testWaitForDiagRequestSent(Programming_Session_Request,1000);
+  if(no_Error=diagInterpretRespAs(Programming_Session_Request,"STDS_PR"))
+  { 
+    testReportWriteDiagObject(Programming_Session_Responce);
+    testStep("","Recieved Positive Responce for Prgramming session ");
+  }
+  else{
+    NRC_data=diagGetLastResponseCode(Programming_Session_Request);
+    testStepFail("","Negative  Responce Recieved for Programming Session Request = 0x%02x",NRC_data);
+    
+  }
+}
