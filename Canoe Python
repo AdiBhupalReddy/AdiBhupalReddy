@@ -1,0 +1,68 @@
+# Import CANoe module and other necessary libraries
+from operator import truth
+from time import sleep as wait
+from py_canoe import CANoe
+import tkinter as tk
+from tkinter import messagebox
+# Initialize CANoe instance
+canoe_init = CANoe()
+canoe_init.open(canoe_cfg=r"c:\Users\Public\Documents\Vector\CANoe\Sample Configurations 18.3.118\J1939\Diagnostics\UDS_J1939\UDS_on_J1939.cfg")
+canoe_init.get_canoe_version_info()
+canoe_init.start_measurement()
+
+
+
+# Mock CANoe API for demonstration
+class CANoeMock:
+    @staticmethod
+    def send_diag_request(ecu, request):
+        # Simulating responses
+        if request in ["10 03", "19 01"]:
+            return "Positive Response: 50 03"  # Example positive response
+        else:
+            return "Negative Response: 7F"
+
+# Replace with actual CANoe API or library
+canoe = CANoe()
+
+def send_diag_request(request):
+    """Send diagnostic request and return response."""
+    try:
+        response = canoe.send_diag_request("EMS", request)  # Replace "EMS" with your ECU name
+        print(response)
+        return response
+    except Exception as e:
+        return f"Error: {e}"
+
+def handle_request():
+    """Handle button click event."""
+    user_input = entry.get().strip()
+    if not user_input:
+        messagebox.showerror("Input Error", "Please enter a diagnostic request.")
+        return
+
+    response = canoe.send_diag_request("EMS", user_input)
+    print(response)
+    if "Positive Response" in response:
+        messagebox.showinfo("Response", f"Positive Response: {response}")
+    elif "Negative Response" in response:
+        messagebox.showwarning("Response", f"Negative Response: {response}")
+    else:
+        messagebox.showerror("Response Error", f"Unexpected response: {response}")
+
+# GUI setup
+root = tk.Tk()
+root.title("Diagnostic Request Tool")
+
+# Input label and entry field
+label = tk.Label(root, text="Enter Diagnostic Request (e.g., '10 03'):")
+label.pack(pady=5)
+entry = tk.Entry(root, width=30)
+entry.pack(pady=5)
+
+# Send button
+send_button = tk.Button(root, text="Send Request", command=handle_request)
+send_button.pack(pady=10)
+
+# Run the GUI
+root.mainloop()
